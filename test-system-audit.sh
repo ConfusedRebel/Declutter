@@ -21,4 +21,24 @@ grep -q '^PROCESS AUDIT$' "$process_report"
 grep -q 'storage report:' <<< "$wrapper_output"
 grep -q 'process report:' <<< "$wrapper_output"
 
+for section in 'TOP 50 BY CPU' 'TOP 50 BY MEMORY' 'TOP 50 BY DISK I/O' 'BATTERY / POWER DATA'; do
+    grep -q "^$section$" "$process_report"
+done
+! grep -q 'command not found' "$process_report"
+! grep -q 'UPower-WARNING' "$process_report"
+
+section_rows() {
+    awk -v section="$1" '
+        $0 == section { in_section=1; next }
+        in_section && /^==========/ { exit }
+        in_section && /^[[:space:]]*[0-9]+[[:space:]]/ { count++ }
+        END { print count + 0 }
+    ' "$process_report"
+}
+
+for section in 'TOP 50 BY CPU' 'TOP 50 BY MEMORY' 'TOP 50 BY DISK I/O'; do
+    rows=$(section_rows "$section")
+    (( rows > 0 && rows <= 50 ))
+done
+
 echo "system-audit smoke test passed"
